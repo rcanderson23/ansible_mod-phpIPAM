@@ -24,6 +24,7 @@ phpipam_freeip
     subnet: '192.168.10.0/24'
     section: ansible-section
     description: 'Optional description'
+  register: new_ip
 ```
 
 phpipam_section
