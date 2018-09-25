@@ -71,7 +71,7 @@ def main():
     # Update vlan information if necessary
 
         value_changed = False
-        payload = {}
+        payload = {'name': name}
         vlan_id = session.get_vlan_id(vlan)
 
         for k in optional_args:
