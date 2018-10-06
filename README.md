@@ -3,7 +3,7 @@ Ansible Modules - phpIPAM
 
 Requirements
 =========================
-`requests`
+None
 
 Installation
 =========================
