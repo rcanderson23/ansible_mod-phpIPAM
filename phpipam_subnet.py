@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 # Copyright: (c) 2018, Carson Anderson <rcanderson23@gmail.com>
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
-from ansible.module_utils.basic import AnsibleModule
-import ansible.module_utils.phpipam as phpipam
-
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
 
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
@@ -19,45 +18,49 @@ module: phpipam_subnet
 author: "Carson Anderson (@rcanderson23)"
 short_description: Set the state of a subnet
 requirements: []
-version_added: "2.7"
+version_added: "2.8"
 description:
     - Creates, modifies, or destroys subnet in phpIPAM instance if necessary.
 options:
-    username:
-        description:
-            - username that has permission to access phpIPAM API
-        required: True
-    password:
-        description:
-            - password for username provided
-        required: True
-    url:
-        description:
-            - API url for phpIPAM instance
-        required: True
-    subnet:
-        description:
-            - Subnet in CIDR format.
-        type: string
-        required: True
-    master_subnet:
-        description:
-            - Master subnet for the subnet to be nested under.
-            - When master_subnet is not defined it defaults to the root.
-        type: string
-        required: False
-        default: root
-    description
-        description:
-            - Optional description displayed next to address in phpIPAM.
-        type: string
-        required: False
-    state:
-        description:
-            - States whether the subnet should be present or absent
-        type: string
-        required: False
-        default: True
+  username:
+    description:
+      - username that has permission to access phpIPAM API
+    required: True
+  password:
+    description:
+      - password for username provided
+    required: True
+  url:
+    description:
+      - API url for phpIPAM instance
+    required: True
+  section:
+    description:
+      - Name of the section that the subnet belongs to.
+    required: True
+  subnet:
+    description:
+      - Subnet in CIDR format.
+    required: True
+  master_subnet:
+    description:
+      - Master subnet for the subnet to be nested under.
+      - When master_subnet is not defined it defaults to the root.
+    required: False
+  vlan:
+    description:
+      - Optional vlan for subnet to be assigned
+    required: False
+  description:
+    description:
+      - Optional description displayed next to address in phpIPAM.
+    required: False
+  state:
+    description:
+      - States whether the subnet should be present or absent
+    choices: ["present", "absent"]
+    required: False
+    default: 'present'
 '''
 
 EXAMPLES = '''
@@ -125,6 +128,8 @@ output:
             type: string
             sample: "206"
 '''
+from ansible.module_utils.basic import AnsibleModule
+import ansible.module_utils.phpipam as phpipam
 
 
 def main():
