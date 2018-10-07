@@ -1,6 +1,130 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
+# Copyright: (c) 2018, Carson Anderson <rcanderson23@gmail.com>
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 from ansible.module_utils.basic import AnsibleModule
 import ansible.module_utils.phpipam as phpipam
+
+
+ANSIBLE_METADATA = {
+    'metadata_version': '1.1',
+    'status': ['preview'],
+    'supported_by': 'community'
+}
+
+
+DOCUMENTATION = '''
+---
+module: phpipam_subnet
+author: "Carson Anderson (@rcanderson23)"
+short_description: Set the state of a subnet
+requirements: []
+version_added: "2.7"
+description:
+    - Creates, modifies, or destroys subnet in phpIPAM instance if necessary.
+options:
+    username:
+        description:
+            - username that has permission to access phpIPAM API
+        required: True
+    password:
+        description:
+            - password for username provided
+        required: True
+    url:
+        description:
+            - API url for phpIPAM instance
+        required: True
+    subnet:
+        description:
+            - Subnet in CIDR format.
+        type: string
+        required: True
+    master_subnet:
+        description:
+            - Master subnet for the subnet to be nested under.
+            - When master_subnet is not defined it defaults to the root.
+        type: string
+        required: False
+        default: root
+    description
+        description:
+            - Optional description displayed next to address in phpIPAM.
+        type: string
+        required: False
+    state:
+        description:
+            - States whether the subnet should be present or absent
+        type: string
+        required: False
+        default: True
+'''
+
+EXAMPLES = '''
+
+- name: Create a subnet
+  phpipam_subnet:
+    username: username
+    password: secret
+    url: "https://ipam.domain.tld/api/app/"
+    section: 'ansible section'
+    subnet: "192.168.10.0/24"
+    description: "optional description"
+    state: present
+
+- name: Create a nested subnet
+  phpipam_subnet:
+    username: username
+    password: secret
+    url: "https://ipam.domain.tld/api/app/"
+    section: 'section two'
+    subnet: '192.168.10.0/25'
+    master_subnet: '192.168.10.0/24'
+    description: "section two"
+    state: present
+
+- name: Delete a subnet
+  phpipam_subnet:
+    username: username
+    password: secret
+    url: "https://ipam.domain.tld/api/app/"
+    section: 'section two'
+    subnet: '192.168.10.0/24'
+    state: absent
+'''
+
+RETURN = '''
+output:
+    description: dictionary containing phpIPAM response
+    returned: success
+    type: complex
+    contains:
+        code:
+            description: HTTP response code
+            returned: success
+            type: int
+            sample: 201
+        success:
+            description: True or False depending on if ip was successfully obtained
+            returned: success
+            type: bool
+            sample: True
+        time:
+            description: Amount of time operation took.
+            returned: success
+            type: float
+            sample: 0.015
+        message:
+            description: Response message of what happened
+            returned: success
+            type: string
+            sample: "Address created"
+        id:
+            description: ID of section created/modified
+            returned: success
+            type: string
+            sample: "206"
+'''
 
 
 def main():
@@ -11,6 +135,7 @@ def main():
             url=dict(type=str, required=True),
             section=dict(type=str, required=True),
             subnet=dict(type=str, required=True),
+            master_subnet=dict(type=str, required=False),
             description=dict(type=str, required=False),
             vlan=dict(type=str, required=False),
             state=dict(default='present', choices=['present', 'absent'])
@@ -26,6 +151,7 @@ def main():
     url = module.params['url']
     section = module.params['section']
     subnet = module.params['subnet']
+    master_subnet = module.params['master_subnet']
     description = module.params['description']
     vlan = module.params['vlan']
     state = module.params['state']
@@ -42,7 +168,7 @@ def main():
     except:
         module.fail_json(msg='section doesn\'t exist', **result)
     found_subnet = session.get_subnet(subnet, section)
-
+    optional_args = {'description': description}
     if vlan:
         # If vlan is defined, make sure it exists and then set
 
@@ -50,15 +176,19 @@ def main():
         if vlan_id is None:
             module.fail_json(msg='vlan not found', **result)
         else:
-            optional_args = {'description': description,
-                             'vlanId': vlan_id}
-    else:
-        optional_args = {'description': description}
+            optional_args['vlanId'] = vlan_id
+
+    if master_subnet:
+        master_subnet_id = session.get_subnet_id(master_subnet, section)
+        if master_subnet_id is None:
+            module.fail_json(msg='master_subnet not found', **result)
+        else:
+            optional_args['masterSubnetId'] = master_subnet_id
 
     if state == 'present' and found_subnet is None:
         # Create subnet if it doesn't exist
 
-        subnet_split = subnet.rsplit('/',1)
+        subnet_split = subnet.rsplit('/', 1)
         creation = session.create(session,
                                   subnet_url,
                                   subnet=subnet_split[0],
@@ -67,10 +197,10 @@ def main():
                                   **optional_args)
         if creation['code'] == 201:
             result['changed'] = True
-            result['msg'] = creation
+            result['output'] = creation
             module.exit_json(**result)
         else:
-            result['msg'] = creation
+            result['output'] = creation
             module.fail_json(**result)
     elif state == 'present':
         # Update subnet if necessary
@@ -88,10 +218,10 @@ def main():
                                             sectionId=found_subnet['sectionId'],
                                             **payload)
             result['changed'] = True
-            result['msg'] = patch_response
+            result['output'] = patch_response
             module.exit_json(**result)
         else:
-            result['msg'] = 'Subnet required no change'
+            result['output'] = 'Subnet required no change'
             module.exit_json(**result)
     else:
         # Delete subnet if present
@@ -99,10 +229,10 @@ def main():
             deletion = session.remove(session, subnet_url, found_subnet['id'])
             if deletion['code'] == 200:
                 result['changed'] = True
-                result['msg'] = deletion
+                result['output'] = deletion
                 module.exit_json(**result)
         except TypeError:
-            result['msg'] = 'Subnet did not exist'
+            result['output'] = 'Subnet did not exist'
             module.exit_json(**result)
 
 
