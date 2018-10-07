@@ -1,6 +1,127 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
+# Copyright: (c) 2018, Carson Anderson <rcanderson23@gmail.com>
+# GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 from ansible.module_utils.basic import AnsibleModule
 import ansible.module_utils.phpipam as phpipam
+
+
+ANSIBLE_METADATA = {
+    'metadata_version': '1.1',
+    'status': ['preview'],
+    'supported_by': 'community'
+}
+
+
+DOCUMENTATION = '''
+---
+module: phpipam_section
+author: "Carson Anderson (@rcanderson23)"
+short_description: Set the state of a section
+requirements: []
+version_added: "2.7"
+description:
+    - Creates, modifies, or destroys section in phpIPAM instance if necessary.
+options:
+    username:
+        description:
+            - username that has permission to access phpIPAM API
+        required: True
+    password:
+        description:
+            - password for username provided
+        required: True
+    url:
+        description:
+            - API url for phpIPAM instance
+        required: True
+    section:
+        description:
+            - Section name that the subnet resides in.
+        type: string
+        required: True
+    master_section:
+        description:
+            - Master section for the section to be nested under.
+            - When master_section is not defined it defaults to the root.
+        type: string
+        required: False
+        default: root
+    description
+        description:
+            - Optional description displayed next to address in phpIPAM.
+        type: string
+        required: False
+    state:
+        description:
+            - States whether the section should be present or absent
+        type: string
+        required: False
+        default: True
+'''
+
+EXAMPLES = '''
+
+- name: Create a section
+  phpipam_section:
+    username: username
+    password: secret
+    url: "https://ipam.domain.tld/api/app/"
+    section: 'ansible section'
+    description: "optional description"
+    state: present
+
+- name: Create a section nested under 'ansible section'
+  phpipam_section:
+    username: username
+    password: secret
+    url: "https://ipam.domain.tld/api/app/"
+    section: 'section two'
+    master_section: 'ansbile section'
+    description: "section two"
+    state: present
+
+- name: Delete a section
+  phpipam_section:
+    username: username
+    password: secret
+    url: "https://ipam.domain.tld/api/app/"
+    section: 'section two'
+    state: absent
+'''
+
+RETURN = '''
+output:
+    description: dictionary containing phpIPAM response
+    returned: success
+    type: complex
+    contains:
+        code:
+            description: HTTP response code
+            returned: success
+            type: int
+            sample: 201
+        success:
+            description: True or False depending on if ip was successfully obtained
+            returned: success
+            type: bool
+            sample: True
+        time:
+            description: Amount of time operation took.
+            returned: success
+            type: float
+            sample: 0.015
+        message:
+            description: Response message of what happened
+            returned: success
+            type: string
+            sample: "Address created"
+        id:
+            description: ID of section created/modified
+            returned: success
+            type: string
+            sample: "206"
+'''
 
 
 def set_master_section(session, master_section):
@@ -60,13 +181,13 @@ def main():
                                   **optional_args)
         if creation['code'] == 201:
             result['changed'] = True
-            result['msg'] = creation
+            result['output'] = creation
             module.exit_json(**result)
         elif creation['code'] == 500:
-            result['msg'] = creation
+            result['output'] = creation
             module.exit_json(**result)
         else:
-            result['msg'] = creation
+            result['output'] = creation
             module.fail_json(msg='Something went wrong', **result)
     elif state == 'present':
         # Potentially modify the section if it doesn't match
@@ -85,10 +206,10 @@ def main():
                                             id=section_id,
                                             **payload)
             result['changed'] = True
-            result['msg'] = patch_response
+            result['output'] = patch_response
             module.exit_json(**result)
         else:
-            result['msg'] = 'No changes made to section'
+            result['output'] = patch_response
             module.exit_json(**result)
     else:
         # Ensure the section does not exist, delete if necessary
@@ -100,13 +221,13 @@ def main():
                                       section_info['id'])
             if deletion['code'] == 200:
                 result['changed'] = True
-                result['msg'] = deletion
+                result['output'] = deletion
                 module.exit_json(**result)
         except KeyError:
-            result['msg'] = 'Section did not exist'
+            result['ouput'] = 'Section did not exist'
             module.exit_json(**result)
         except TypeError:
-            result['msg'] = 'Section did not exist'
+            result['output'] = 'Section did not exist'
             module.exit_json(**result)
 
 
