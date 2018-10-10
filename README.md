@@ -3,7 +3,7 @@ Ansible Modules - phpIPAM
 
 Requirements
 =========================
-None
+ansible >= 2.7
 
 Installation
 =========================
