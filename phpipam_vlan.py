@@ -125,7 +125,7 @@ def main():
             description=dict(type=str, required=False),
             state=dict(default='present', choices=['present', 'absent'])
         ),
-        supports_check_mode=False
+        supports_check_mode=True
     )
 
     result = dict(
@@ -152,6 +152,8 @@ def main():
                      'description': description}
     if state == 'present' and found_vlan is None:
         # Create vlan if not present
+        if module.check_mode:
+            module.exit_json(changed=True)
 
         creation = session.create(session,
                                   vlan_url,
@@ -175,6 +177,9 @@ def main():
                 value_changed = True
                 payload[k] = optional_args[k]
         if value_changed:
+            if module.check_mode:
+                module.exit_json(changed=True)
+
             patch_response = session.modify(session,
                                             vlan_url,
                                             id=vlan_id,
@@ -183,7 +188,7 @@ def main():
             result['output'] = patch_response
             module.exit_json(**result)
         else:
-            result['output'] = patch_response
+            result['changed'] = False
             module.exit_json(**result)
     else:
         # Delete vlan if it exist
@@ -193,6 +198,9 @@ def main():
             result['output'] = 'Vlan doesn\'t exist'
             module.exit_json(**result)
         else:
+            if module.check_mode:
+                module.exit_json(changed=True)
+
             deletion = session.remove(session,
                                       vlan_url,
                                       vlan_id)
