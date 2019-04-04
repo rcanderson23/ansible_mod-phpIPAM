@@ -4,6 +4,7 @@
 # GNU General Public License v3.0+ (see COPYING or https://www.gnu.org/licenses/gpl-3.0.txt)
 
 from __future__ import absolute_import, division, print_function
+
 __metaclass__ = type
 
 ANSIBLE_METADATA = {
@@ -11,7 +12,6 @@ ANSIBLE_METADATA = {
     'status': ['preview'],
     'supported_by': 'community'
 }
-
 
 DOCUMENTATION = '''
 ---
@@ -43,6 +43,11 @@ options:
     description:
       - Vlan display name in phpIPAM.
     required: True
+  domainid:
+    description: 
+      - Optional L2Domain ID to add this vlan to
+    required: False
+    default: 1
   description:
     description:
       - Optional description displayed next to vlan in phpIPAM.
@@ -111,7 +116,7 @@ output:
 '''
 
 from ansible.module_utils.basic import AnsibleModule
-import ansible.module_utils.phpipam as phpipam
+from ansible.module_utils.phpipam import PhpIpamWrapper
 
 
 def main():
@@ -122,7 +127,8 @@ def main():
             url=dict(type=str, required=True),
             vlan=dict(type=str, required=True),
             name=dict(type=str, required=True),
-            description=dict(type=str, required=False),
+            domainid=dict(type=str, required=False, default=1),
+            description=dict(type=str, required=False, default="None"),
             state=dict(default='present', choices=['present', 'absent'])
         ),
         supports_check_mode=True
@@ -136,24 +142,28 @@ def main():
     url = module.params['url']
     vlan = module.params['vlan']
     name = module.params['name']
+    domainid = module.params['domainid']
     description = module.params['description']
     state = module.params['state']
 
-    session = phpipam.PhpIpamWrapper(username, password, url)
+    session = PhpIpamWrapper(username, password, url)
     try:
         session.create_session()
     except AttributeError:
         module.fail_json(msg='Error getting authorization token', **result)
 
     vlan_url = url + 'vlan/'
-    found_vlan = session.get_vlan(vlan)
+    found_vlan = session.get_vlan(vlan, domainid)
+
 
     optional_args = {'name': name,
-                     'description': description}
+                     'description': description,
+                     'domainId': domainid}
+
     if state == 'present' and found_vlan is None:
         # Create vlan if not present
         if module.check_mode:
-            module.exit_json(changed=True)
+            module.exit_json(changed=True,output="Vlan {} Created".format(vlan))
 
         creation = session.create(session,
                                   vlan_url,
@@ -170,7 +180,7 @@ def main():
 
         value_changed = False
         payload = {'name': name}
-        vlan_id = session.get_vlan_id(vlan)
+        vlan_id = session.get_vlan_id(vlan,domainid)
 
         for k in optional_args:
             if optional_args[k] != found_vlan[k]:
@@ -178,7 +188,7 @@ def main():
                 payload[k] = optional_args[k]
         if value_changed:
             if module.check_mode:
-                module.exit_json(changed=True)
+                module.exit_json(changed=True,output="Vlan {} modified".format(vlan_id))
 
             patch_response = session.modify(session,
                                             vlan_url,

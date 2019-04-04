@@ -121,8 +121,7 @@ output:
 '''
 
 from ansible.module_utils.basic import AnsibleModule
-import ansible.module_utils.phpipam as phpipam
-
+from ansible.module_utils.phpipam import PhpIpamWrapper
 
 def set_master_section(session, master_section):
     if master_section in ('', 'root'):
@@ -156,7 +155,7 @@ def main():
     description = module.params['description']
     state = module.params['state']
 
-    session = phpipam.PhpIpamWrapper(username, password, url)
+    session = PhpIpamWrapper(username, password, url)
     try:
         session.create_session()
     except AttributeError:

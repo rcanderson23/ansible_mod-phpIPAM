@@ -67,5 +67,6 @@ phpipam_vlan
     vlan: '100'
     name: 'required name'
     description: 'Optional description'
+    domainid: "1" # optional l2domain id, default: 1
     state: present
 ```

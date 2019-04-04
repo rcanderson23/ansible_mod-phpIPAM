@@ -115,7 +115,7 @@ output:
 
 
 from ansible.module_utils.basic import AnsibleModule
-import ansible.module_utils.phpipam as phpipam
+from ansible.module_utils.phpipam import PhpIpamWrapper
 import urllib
 import json
 
@@ -145,7 +145,7 @@ def main():
     hostname = module.params['hostname']
     description = module.params['description']
 
-    session = phpipam.PhpIpamWrapper(username, password, url)
+    session = PhpIpamWrapper(username, password, url)
     try:
         session.create_session()
     except AttributeError:

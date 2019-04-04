@@ -129,7 +129,7 @@ output:
             sample: "206"
 '''
 from ansible.module_utils.basic import AnsibleModule
-import ansible.module_utils.phpipam as phpipam
+from ansible.module_utils.phpipam import PhpIpamWrapper
 
 
 def main():
@@ -161,7 +161,7 @@ def main():
     vlan = module.params['vlan']
     state = module.params['state']
 
-    session = phpipam.PhpIpamWrapper(username, password, url)
+    session = PhpIpamWrapper(username, password, url)
     try:
         session.create_session()
     except AttributeError:

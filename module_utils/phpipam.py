@@ -44,11 +44,11 @@ class PhpIpamWrapper(urls.Request):
         except:
             return None
 
-    def get_vlan(self, vlan):
+    def get_vlan(self, vlan, domainid="1"):
         url = self.url + 'vlan/'
         vlan_response = json.load(self.get(url))
         for vlans in vlan_response['data']:
-            if vlans['number'] == vlan:
+            if vlans['number'] == vlan and vlans['domainId'] == domainid:
                 return vlans
         return None
 
@@ -72,8 +72,8 @@ class PhpIpamWrapper(urls.Request):
         except TypeError:
             return None
 
-    def get_vlan_id(self, vlan):
-        vlans = self.get_vlan(vlan)
+    def get_vlan_id(self, vlan, domainid=1):
+        vlans = self.get_vlan(vlan, domainid)
         try:
             if vlans['number'] == vlan:
                 return vlans['vlanId']
